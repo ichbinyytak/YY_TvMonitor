@@ -1,0 +1,33 @@
+# Android build artifacts
+bin/
+gen/
+out/
+build/
+*.apk
+*.ap_
+*.dex
+*.class
+
+# Signing keys and keystores
+*.keystore
+*.jks
+
+# Environment variables & local configuration (Privacy Protection)
+.env
+.env.local
+
+# Logs and scratch files
+*.log
+interaction/
+/tmp/
+
+# IDE & Editor files
+.idea/
+.vscode/
+*.iml
+.gradle/
+local.properties
+
+# OS files
+.DS_Store
+Thumbs.db
