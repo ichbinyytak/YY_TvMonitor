@@ -253,7 +253,7 @@ public class MainActivity extends Activity {
 
         // ====================== 右栏：开关与显示设置 (固定在右侧不动) ======================
         LinearLayout rightCard = createCardLayout();
-        LinearLayout.LayoutParams rightParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.25f);
+        LinearLayout.LayoutParams rightParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1.25f);
         rightCard.setLayoutParams(rightParams);
         mainCols.addView(rightCard);
 
@@ -498,21 +498,38 @@ public class MainActivity extends Activity {
         });
         rightCard.addView(btnSize);
 
-        // 3. 界面底部信息栏 (作者 GitHub 主页与项目开源地址)
+        // 占位 Spacer：将作者与项目信息推至右侧窗口最下方
+        View spacer = new View(this);
+        LinearLayout.LayoutParams spacerLp = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, 0, 1.0f
+        );
+        spacer.setLayoutParams(spacerLp);
+        rightCard.addView(spacer);
+
+        // 右侧窗口最底部两行信息（极小字号 9 SP）
         LinearLayout footerLayout = new LinearLayout(this);
-        footerLayout.setOrientation(LinearLayout.HORIZONTAL);
-        footerLayout.setGravity(Gravity.CENTER);
-        footerLayout.setPadding(0, 10, 0, 0);
+        footerLayout.setOrientation(LinearLayout.VERTICAL);
+        footerLayout.setGravity(Gravity.CENTER_HORIZONTAL);
+        footerLayout.setPadding(0, 10, 0, 4);
 
-        TextView tvFooter = new TextView(this);
-        tvFooter.setText("GitHub: https://github.com/ichbinyytak   |   开源项目地址: https://github.com/ichbinyytak/YY_TvMonitor");
-        tvFooter.setTextColor(Color.parseColor("#78909C"));
-        tvFooter.setTextSize(12);
-        tvFooter.setGravity(Gravity.CENTER);
-        tvFooter.setFocusable(false);
-        footerLayout.addView(tvFooter);
+        TextView tvLine1 = new TextView(this);
+        tvLine1.setText("GitHub: https://github.com/ichbinyytak");
+        tvLine1.setTextColor(Color.parseColor("#607D8B"));
+        tvLine1.setTextSize(9);
+        tvLine1.setGravity(Gravity.CENTER_HORIZONTAL);
+        tvLine1.setFocusable(false);
+        footerLayout.addView(tvLine1);
 
-        root.addView(footerLayout);
+        TextView tvLine2 = new TextView(this);
+        tvLine2.setText("开源地址: https://github.com/ichbinyytak/YY_TvMonitor");
+        tvLine2.setTextColor(Color.parseColor("#607D8B"));
+        tvLine2.setTextSize(9);
+        tvLine2.setGravity(Gravity.CENTER_HORIZONTAL);
+        tvLine2.setFocusable(false);
+        tvLine2.setPadding(0, 3, 0, 0);
+        footerLayout.addView(tvLine2);
+
+        rightCard.addView(footerLayout);
 
         setContentView(root);
 
