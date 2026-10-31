@@ -77,6 +77,8 @@ public class MainActivity extends Activity {
     private TextView tvStorageInfo;
     private TextView tvEthInfo;
     private TextView tvWifiInfo;
+    private TextView tvEthTitle;
+    private TextView tvWifiTitle;
     private TextView tvServicesTitle;
     private ScrollView leftScrollView;
     private LinearLayout servicesContainer;
@@ -150,8 +152,14 @@ public class MainActivity extends Activity {
         tvGpuInfo = createInfoRow(leftCard, "GPU", "正在检测...");
         tvMemInfo = createInfoRow(leftCard, "内存", "正在检测...");
         tvStorageInfo = createInfoRow(leftCard, "存储情况", "正在检测...");
-        tvEthInfo = createInfoRow(leftCard, "有线网卡 (千兆)", "正在检测...");
-        tvWifiInfo = createInfoRow(leftCard, "无线网卡 (150M Wi-Fi 4)", "正在检测...");
+
+        TextView[] ethRow = createInfoRowWithTitle(leftCard, "有线网卡", "正在检测...");
+        tvEthTitle = ethRow[0];
+        tvEthInfo = ethRow[1];
+
+        TextView[] wifiRow = createInfoRowWithTitle(leftCard, "无线网卡", "正在检测...");
+        tvWifiTitle = wifiRow[0];
+        tvWifiInfo = wifiRow[1];
 
         // 当前加载服务 (带勾选框切换名称/包名)
         LinearLayout servicesRow = new LinearLayout(this);
@@ -676,6 +684,14 @@ public class MainActivity extends Activity {
         String hwDecoders = getHardwareDecodersSummary();
         tvGpuInfo.setText("ARM " + gpu + " (OpenGL ES 3.2)\n硬解支持: " + hwDecoders);
 
+        // 网卡硬件规格动态探测
+        if (tvEthTitle != null) {
+            tvEthTitle.setText("• 有线网卡 (" + detectEthernetHardwareSpec() + ")：");
+        }
+        if (tvWifiTitle != null) {
+            tvWifiTitle.setText("• 无线网卡 (" + detectWifiHardwareSpec() + ")：");
+        }
+
         // 内存、存储与网络 (动态刷新)
         refreshDynamicInfo();
         refreshRunningServicesInfo();
@@ -688,10 +704,11 @@ public class MainActivity extends Activity {
     }
 
     private void refreshNetworkInfo() {
-        // 1. 有线网卡：内容为 100Mbps，192.168.x.x (已连接) 或 未连接
+        // 1. 有线网卡：内容为协商速率，IP (已连接) 或 未连接
         String ethIp = getInterfaceIp("eth");
         if (ethIp != null && !ethIp.isEmpty()) {
-            tvEthInfo.setText("100Mbps，" + ethIp + " (已连接)");
+            String ethSpeed = getEthernetLinkSpeed();
+            tvEthInfo.setText(ethSpeed + "，" + ethIp + " (已连接)");
             tvEthInfo.setTextColor(Color.parseColor("#00FF88"));
         } else {
             tvEthInfo.setText("未连接");
@@ -1483,6 +1500,152 @@ public class MainActivity extends Activity {
 
         parent.addView(row);
         return val;
+    }
+
+    private TextView[] createInfoRowWithTitle(LinearLayout parent, String label, String initialVal) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.VERTICAL);
+        row.setPadding(0, 5, 0, 8);
+
+        TextView lbl = new TextView(this);
+        lbl.setText("• " + label + "：");
+        lbl.setTextColor(Color.parseColor("#90A4AE"));
+        lbl.setTextSize(13);
+        lbl.setTypeface(Typeface.DEFAULT_BOLD);
+        row.addView(lbl);
+
+        TextView val = new TextView(this);
+        val.setText(initialVal);
+        val.setTextColor(Color.WHITE);
+        val.setTextSize(14);
+        val.setPadding(12, 2, 0, 0);
+        val.setLineSpacing(3, 1.0f);
+        row.addView(val);
+
+        parent.addView(row);
+        return new TextView[]{lbl, val};
+    }
+
+    private String cachedEthSpec = null;
+    private String detectEthernetHardwareSpec() {
+        if (cachedEthSpec != null) return cachedEthSpec;
+        // 1. 尝试从 MDIO 总线探测 PHY 物理芯片驱动
+        try {
+            File mdioBusDir = new File("/sys/class/net/eth0/device/mdio_bus");
+            if (mdioBusDir.exists() && mdioBusDir.isDirectory()) {
+                File[] buses = mdioBusDir.listFiles();
+                if (buses != null) {
+                    for (File bus : buses) {
+                        File[] subDevs = bus.listFiles();
+                        if (subDevs != null) {
+                            for (File dev : subDevs) {
+                                File driverLink = new File(dev, "driver");
+                                if (driverLink.exists()) {
+                                    String target = driverLink.getCanonicalPath().toLowerCase();
+                                    if (target.contains("internal phy") || target.contains("rtl8201") || target.contains("fe phy")) {
+                                        cachedEthSpec = "百兆";
+                                        return cachedEthSpec;
+                                    } else if (target.contains("gigabit") || target.contains("rtl8211") || target.contains("1000")) {
+                                        cachedEthSpec = "千兆";
+                                        return cachedEthSpec;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+
+        // 2. 从设备树属性探测（Amlogic internal_phy 节点存在即为百兆）
+        try {
+            if (new File("/proc/device-tree/ethernet@ff3f0000/internal_phy").exists() ||
+                new File("/sys/firmware/devicetree/base/ethernet@ff3f0000/internal_phy").exists()) {
+                cachedEthSpec = "百兆";
+                return cachedEthSpec;
+            }
+        } catch (Throwable ignored) {}
+
+        // 3. 从系统 NetworkCapabilities 带宽属性探测
+        try {
+            ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (cm != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                for (Network net : cm.getAllNetworks()) {
+                    NetworkCapabilities caps = cm.getNetworkCapabilities(net);
+                    if (caps != null && caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
+                        int downKbps = caps.getLinkDownstreamBandwidthKbps();
+                        if (downKbps >= 1000000) {
+                            cachedEthSpec = "千兆";
+                            return cachedEthSpec;
+                        }
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+
+        cachedEthSpec = "百兆";
+        return cachedEthSpec;
+    }
+
+    private String getEthernetLinkSpeed() {
+        // 尝试从 sysfs 读取实时协商速率
+        try {
+            BufferedReader br = new BufferedReader(new FileReader("/sys/class/net/eth0/speed"));
+            String line = br.readLine();
+            br.close();
+            if (line != null && !line.trim().isEmpty()) {
+                int s = Integer.parseInt(line.trim());
+                if (s > 0) return s + "Mbps";
+            }
+        } catch (Throwable ignored) {}
+
+        // 尝试从 NetworkCapabilities 读取
+        try {
+            ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (cm != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                for (Network net : cm.getAllNetworks()) {
+                    NetworkCapabilities caps = cm.getNetworkCapabilities(net);
+                    if (caps != null && caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
+                        int downKbps = caps.getLinkDownstreamBandwidthKbps();
+                        if (downKbps >= 1000000) return "1000Mbps";
+                        if (downKbps >= 100000) return "100Mbps";
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+
+        return "100Mbps";
+    }
+
+    private String cachedWifiSpec = null;
+    private String detectWifiHardwareSpec() {
+        if (cachedWifiSpec != null) return cachedWifiSpec;
+        String driver = getSystemProp("ro.wifi.driver", "").toLowerCase();
+        if (driver.isEmpty()) {
+            try {
+                BufferedReader br = new BufferedReader(new FileReader("/proc/modules"));
+                String line;
+                while ((line = br.readLine()) != null) {
+                    line = line.toLowerCase();
+                    if (line.contains("rtl8723") || line.contains("rtl8188") || line.contains("rtl8821") || line.contains("rtl8822") || line.contains("bcmdhd") || line.contains("aic8800")) {
+                        driver = line.split("\\s+")[0];
+                        break;
+                    }
+                }
+                br.close();
+            } catch (Throwable ignored) {}
+        }
+
+        if (driver.contains("8822") || driver.contains("8821") || driver.contains("8812") || driver.contains("ac")) {
+            cachedWifiSpec = "双频 Wi-Fi 5";
+        } else if (driver.contains("aic8800") || driver.contains("ax")) {
+            cachedWifiSpec = "Wi-Fi 6";
+        } else if (driver.contains("8723") || driver.contains("8188") || driver.contains("8189") || driver.contains("8192")) {
+            cachedWifiSpec = "150M Wi-Fi 4";
+        } else {
+            cachedWifiSpec = "Wi-Fi 4";
+        }
+        return cachedWifiSpec;
     }
 
     private Button createSettingButton() {
