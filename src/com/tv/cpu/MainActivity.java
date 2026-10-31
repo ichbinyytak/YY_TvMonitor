@@ -498,6 +498,22 @@ public class MainActivity extends Activity {
         });
         rightCard.addView(btnSize);
 
+        // 3. 界面底部信息栏 (作者 GitHub 主页与项目开源地址)
+        LinearLayout footerLayout = new LinearLayout(this);
+        footerLayout.setOrientation(LinearLayout.HORIZONTAL);
+        footerLayout.setGravity(Gravity.CENTER);
+        footerLayout.setPadding(0, 10, 0, 0);
+
+        TextView tvFooter = new TextView(this);
+        tvFooter.setText("GitHub: https://github.com/ichbinyytak   |   开源项目地址: https://github.com/ichbinyytak/YY_TvMonitor");
+        tvFooter.setTextColor(Color.parseColor("#78909C"));
+        tvFooter.setTextSize(12);
+        tvFooter.setGravity(Gravity.CENTER);
+        tvFooter.setFocusable(false);
+        footerLayout.addView(tvFooter);
+
+        root.addView(footerLayout);
+
         setContentView(root);
 
         // 加载静态信息与启动定时器

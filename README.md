@@ -202,8 +202,17 @@ adb shell "logcat -d | grep 'TV_CPU' | tail -n 10"
 
 ---
 
-## 📜 开源协议
+## 📜 开源协议与代码引用说明 (License & Credits)
 
-本项目采用 **MIT License** 开源协议，欢迎各位电视盒子玩家与开发者二次定制与交流。
+### 1. 代码引用与自研说明
+* **纯自研零第三方依赖 (100% Pure Vanilla Java)**：本项目所有业务逻辑、硬件识别算法、双栏遥控焦点系统、无框 HUD 槽位渲染引擎及 UI 资源均为**纯原创独立编写**，**未引用、抄袭或嵌入任何第三方开源项目代码与闭源 SDK**；
+* **底层开放标准接口**：底层硬件与性能数据采集依托于标准 **Android Open Source Project (AOSP)** 及 **Linux Kernel** 内核原生开放接口（包含 `/proc/stat`、Linux cpufreq/cpuidle sysfs 节点、Android `TrafficStats` 及 `MediaCodecList` 等）；
+* **轻量级设计规范**：全工程零 Gradle/Maven 第三方依赖引入，仅依靠 Android 原生 SDK 21+ 基础 API 编译构建。
+
+### 2. 开源协议
+本项目采用 **[MIT License](LICENSE)** 开源协议，允许任何个人或组织自由使用、学习、修改、派生和商业分发。
+
+* 👤 **作者**：[ichbinyytak](https://github.com/ichbinyytak)
+* 🌐 **项目主页**：[https://github.com/ichbinyytak/YY_TvMonitor](https://github.com/ichbinyytak/YY_TvMonitor)
 
 > **免责声明**：本工具提供的【建议精简】标签仅供系统优化诊断参考，请在停用或卸载任何系统服务前明确其用途，避免误删导致特定功能受限。
